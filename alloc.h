@@ -183,12 +183,20 @@ namespace pbbs {
 
   // these are bucket sizes used by the default allocator.
   std::vector<size_t> default_sizes() {
+    /*
     size_t log_min_size = 4;
     size_t log_max_size = pbbs::log2_up(getMemorySize()/64);
 
     std::vector<size_t> sizes;
     for (size_t i = log_min_size; i <= log_max_size; i++)
       sizes.push_back(1 << i);
+    return sizes;
+    */
+
+    /* SAM_NOTE: hacked this to prevent large up-front allocations which
+     * distorted space usage numbers. */
+    std::vector<size_t> sizes;
+    sizes.push_back(1 << 3);
     return sizes;
   }
 
@@ -276,7 +284,12 @@ namespace pbbs {
 
   __mallopt __mallopt_var;
   
-  inline void* my_alloc(size_t i) {return malloc(i);}
+  inline void* my_alloc(size_t i) {
+    /*if (i >= 1000000) {
+      fprintf(stderr, "large malloc %zu\n", i);
+    }*/
+    return malloc(i);
+  }
   inline void my_free(void* p) {free(p);}
   void allocator_clear() {}
   void allocator_reserve(size_t bytes) {}
@@ -292,6 +305,9 @@ namespace pbbs {
 
   // allocates and tags with a header (8, 16 or 64 bytes) that contains the size
   void* my_alloc(size_t n) {
+    /*if (n >= 1000000) {
+      fprintf(stderr, "large my_alloc %zu\n", n);
+    }*/
     size_t hsize = header_size(n);
     void* ptr;
     ptr = default_allocator.allocate(n + hsize);
